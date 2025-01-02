@@ -41,11 +41,30 @@ red.head(3) # Nicely done
 # In[6]:
 
 
+# This is future David, after evaluating the model, we saw that the model doesn't accuately pick up on 8's, 3's and 4's (they have the least occurences in the data)
+# So we should probably drop observations where quality is 3, 4, and 8
+red["quality"].value_counts()
+
+# We can see that they have the least occurences
+
+
+# In[7]:
+
+
+# Let's just drop the 3's and 8's and see what changes in out model
+red = red.drop(red[red['quality'] == 3].index)
+red = red.drop(red[red['quality'] == 8].index)
+red = red.drop(red[red['quality'] == 4].index)
+
+
+# In[8]:
+
+
 # Ok we are trying to predict the quality feature
 red.info()
 
 
-# In[7]:
+# In[9]:
 
 
 # Let's split the train and test sets here
@@ -53,7 +72,7 @@ train = red[0:481]
 test = red[481:]
 
 
-# In[8]:
+# In[10]:
 
 
 # Now let's make a copy of the train set to work on so we don't affect it later, the test set as well
@@ -61,13 +80,13 @@ train_copy = train.copy()
 test_copy = test.copy()
 
 
-# In[9]:
+# In[11]:
 
 
 train_copy.head()
 
 
-# In[10]:
+# In[12]:
 
 
 # No null values in the dataset so we move
@@ -77,14 +96,14 @@ train_copy.head()
 
 # #### quality
 
-# In[11]:
+# In[13]:
 
 
 # Let's try to understand and see the target feature a little
 train_copy["quality"].value_counts()
 
 
-# In[12]:
+# In[14]:
 
 
 # I think I'll drop the one observation with a 3, let's see it tho
@@ -93,7 +112,7 @@ train_copy.query("quality==3")
 # oh why the wine is rated so poorly is because of the high citric acid content, I just checked and it makes wines taste sharp, sour and bad
 
 
-# In[13]:
+# In[15]:
 
 
 # Let's use a frame of reference to check if it's an outlier of some sorts
@@ -104,14 +123,14 @@ train_copy.query("quality==5").head()
 
 # #### fixed acidity
 
-# In[14]:
+# In[16]:
 
 
 sns.histplot(train_copy["fixed acidity"])
 # Looks somewhat normal with a lot of the data in the median
 
 
-# In[15]:
+# In[17]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="fixed acidity")
@@ -119,7 +138,7 @@ sns.boxplot(data=train_copy, x="quality", y="fixed acidity")
 # Seems to be some kind of trend here, wines with a lower fixed acidity median, generally have to have lower scores
 
 
-# In[16]:
+# In[18]:
 
 
 # Let's do oneway anova, although we already see a difference in the classes, let's see it with math
@@ -132,7 +151,7 @@ print(f"Pvalue: {pvalue}")
 # oh yh this a good feature for sure
 
 
-# In[17]:
+# In[19]:
 
 
 # Let's see spearman on it, since it is kind of a ranked feature, let's see how it would perform
@@ -145,7 +164,7 @@ print(f"Pvalue: {pvalue}")
 # ok there does seem to be some positive correlation although it's a kinda weak, I think it's an important feature, so we'll keep it
 
 
-# In[18]:
+# In[20]:
 
 
 # Kruskal-wallis test is like ANOVA, but does not assume normality
@@ -160,13 +179,13 @@ print(f"Pvalue: {pvalue}")
 
 # #### volatile acidity
 
-# In[19]:
+# In[21]:
 
 
 sns.histplot(train_copy["volatile acidity"])
 
 
-# In[20]:
+# In[22]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="volatile acidity")
@@ -174,7 +193,7 @@ sns.boxplot(data=train_copy, x="quality", y="volatile acidity")
 # Seems to be a trend here as well, kinda inverse proportional compared to the top one
 
 
-# In[21]:
+# In[23]:
 
 
 # Performing oneway ANOVA on this as well
@@ -184,7 +203,7 @@ print(f"F-statistic: {statistic}")
 print(f"Pvalue: {pvalue}")
 
 
-# In[22]:
+# In[24]:
 
 
 from scipy.stats import spearmanr
@@ -196,7 +215,7 @@ print(f"Pvalue: {pvalue}")
 # Makes sense for the correlation to be negative based on the boxplot
 
 
-# In[23]:
+# In[25]:
 
 
 from scipy.stats import kruskal
@@ -208,7 +227,7 @@ print(f"Pvalue: {pvalue}")
 
 # #### citric acid
 
-# In[24]:
+# In[26]:
 
 
 sns.histplot(train_copy["citric acid"])
@@ -216,7 +235,7 @@ sns.histplot(train_copy["citric acid"])
 # Kinda weirdly distributed
 
 
-# In[25]:
+# In[27]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="citric acid")
@@ -224,7 +243,7 @@ sns.boxplot(data=train_copy, x="quality", y="citric acid")
 # There does seem to be a trend here as well
 
 
-# In[26]:
+# In[28]:
 
 
 # Let's use kruskal on this since citric acid isn't placed normally at all
@@ -236,7 +255,7 @@ print(f"Pvalue: {pvalue}")
 # ok nice variance with the categories
 
 
-# In[27]:
+# In[29]:
 
 
 from scipy.stats import spearmanr
@@ -250,14 +269,14 @@ print(f"Pvalue: {pvalue}")
 
 # #### residual sugar
 
-# In[28]:
+# In[30]:
 
 
 # Let's see the distribution of the feature
 sns.histplot(train_copy["residual sugar"])
 
 
-# In[29]:
+# In[31]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="residual sugar")
@@ -265,7 +284,7 @@ sns.boxplot(data=train_copy, x="quality", y="residual sugar")
 # There's a trend here although it's not as prominent as the others
 
 
-# In[30]:
+# In[32]:
 
 
 from scipy.stats import spearmanr
@@ -277,7 +296,7 @@ print(f"Pvalue: {pvalue}")
 # Correlation is low icl, but we'll see how the feature affects the model with RFE and check feature importances
 
 
-# In[31]:
+# In[33]:
 
 
 statistic, pvalue = kruskal(train_copy["quality"], train_copy["residual sugar"])
@@ -290,13 +309,13 @@ print(f"Pvalue: {pvalue}")
 
 # #### chlorides
 
-# In[32]:
+# In[34]:
 
 
 train_copy.chlorides.dtype
 
 
-# In[33]:
+# In[35]:
 
 
 sns.histplot(train_copy["chlorides"])
@@ -304,13 +323,13 @@ sns.histplot(train_copy["chlorides"])
 # Seems normal but contains heavy outliers, we'll use kruskal-wallis test instead on one way ANOVA
 
 
-# In[34]:
+# In[36]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="chlorides")
 
 
-# In[35]:
+# In[37]:
 
 
 statistic, pvalue = spearmanr(train_copy["quality"], train_copy["chlorides"])
@@ -321,7 +340,7 @@ print(f"pvalue: {pvalue}")
 # Just like I thought even from the boxplot, this feature doesn't really affect the quality of the wine, we'll decide with RFE and such
 
 
-# In[36]:
+# In[38]:
 
 
 # Let's see kruskal tho, there doesn't seem to be much class variation across the feature here, I can't lie
@@ -333,13 +352,13 @@ print(f"pvalue: {pvalue}")
 
 # #### free sulfur dioxide
 
-# In[37]:
+# In[39]:
 
 
 train_copy["free sulfur dioxide"].dtype
 
 
-# In[38]:
+# In[40]:
 
 
 sns.histplot(train_copy["free sulfur dioxide"])
@@ -347,7 +366,7 @@ sns.histplot(train_copy["free sulfur dioxide"])
 # Looks skewed postively skewed and it has outliers to top it off
 
 
-# In[39]:
+# In[41]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="free sulfur dioxide")
@@ -355,7 +374,7 @@ sns.boxplot(data=train_copy, x="quality", y="free sulfur dioxide")
 # oh yh but there is some trend here, higher quality wines have lower sulphur content generally
 
 
-# In[40]:
+# In[42]:
 
 
 # Let's check the correlation between the features
@@ -367,7 +386,7 @@ print(f"pvalue: {pvalue}")
 # Yh you could tell it would be a negative correlation at least, let's see kruskal
 
 
-# In[41]:
+# In[43]:
 
 
 statistic, pvalue = kruskal(train_copy["quality"], train_copy["free sulfur dioxide"])
@@ -380,7 +399,7 @@ print(f"pvalue: {pvalue}")
 
 # #### total sulfur dioxide
 
-# In[42]:
+# In[44]:
 
 
 # Checking the distriubtion of the feature
@@ -389,7 +408,7 @@ sns.histplot(train_copy["total sulfur dioxide"])
 # Oh not bad actually, its a little positively skewed tho, I think one way ANOVA will suffice
 
 
-# In[43]:
+# In[45]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="total sulfur dioxide")
@@ -397,7 +416,7 @@ sns.boxplot(data=train_copy, x="quality", y="total sulfur dioxide")
 # It doesn't look like there's a pattern here tho, we'll see
 
 
-# In[44]:
+# In[46]:
 
 
 # Let's check the correlation between the features
@@ -409,7 +428,7 @@ print(f"pvalue: {pvalue}")
 # Not bad actually, better than most features
 
 
-# In[45]:
+# In[47]:
 
 
 statistic, pvalue = f_oneway(train_copy["quality"], train_copy["total sulfur dioxide"])
@@ -422,13 +441,13 @@ print(f"pvalue: {pvalue}")
 
 # #### density
 
-# In[46]:
+# In[48]:
 
 
 train_copy["density"].dtype
 
 
-# In[47]:
+# In[49]:
 
 
 sns.histplot(train_copy["density"])
@@ -436,7 +455,7 @@ sns.histplot(train_copy["density"])
 # Wow, I'm impressed, it's pretty normally distributed
 
 
-# In[48]:
+# In[50]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="density")
@@ -444,7 +463,7 @@ sns.boxplot(data=train_copy, x="quality", y="density")
 # Postivish trend I guess
 
 
-# In[49]:
+# In[51]:
 
 
 statistic, pvalue = spearmanr(train_copy["quality"], train_copy["density"])
@@ -454,7 +473,7 @@ print(f"pvalue: {pvalue}")
 # pvalue is relatively low compared to the other features
 
 
-# In[50]:
+# In[52]:
 
 
 statistic, pvalue = f_oneway(train_copy["quality"], train_copy["density"])
@@ -465,7 +484,7 @@ print(f"pvalue: {pvalue}")
 # Oh no, well that does mean it might be neglible tho == very good
 
 
-# In[51]:
+# In[53]:
 
 
 statistic, pvalue = kruskal(train_copy["quality"], train_copy["total sulfur dioxide"])
@@ -478,13 +497,13 @@ print(f"pvalue: {pvalue}")
 
 # #### pH
 
-# In[52]:
+# In[54]:
 
 
 train_copy["pH"].dtype
 
 
-# In[53]:
+# In[55]:
 
 
 sns.histplot(train_copy["pH"])
@@ -492,7 +511,7 @@ sns.histplot(train_copy["pH"])
 # Wowwww really beautiful, closest thing I've ever seen to a gaussian like distribution since I started doing EDA in ML
 
 
-# In[54]:
+# In[56]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="pH")
@@ -500,7 +519,7 @@ sns.boxplot(data=train_copy, x="quality", y="pH")
 # yup, there's is a trend here
 
 
-# In[55]:
+# In[57]:
 
 
 statistic, pvalue = spearmanr(train_copy["quality"], train_copy["pH"])
@@ -510,7 +529,7 @@ print(f"pvalue: {pvalue}")
 # Sad looking correlation smh, we'll see later tho
 
 
-# In[56]:
+# In[58]:
 
 
 # Let's do ANOVA, I suspect the pvalue will be 0
@@ -524,7 +543,7 @@ print(f"pvalue: {pvalue}")
 
 # #### sulphates
 
-# In[57]:
+# In[59]:
 
 
 sns.histplot(train_copy["sulphates"])
@@ -532,7 +551,7 @@ sns.histplot(train_copy["sulphates"])
 # postitively skewed with some outliers
 
 
-# In[58]:
+# In[60]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="sulphates")
@@ -540,7 +559,7 @@ sns.boxplot(data=train_copy, x="quality", y="sulphates")
 # Oh, yh that's a beautiful looking postive trend/correlation
 
 
-# In[59]:
+# In[61]:
 
 
 statistic, pvalue = spearmanr(train_copy["quality"], train_copy["sulphates"])
@@ -551,7 +570,7 @@ print(f"pvalue: {pvalue}")
 # Yh I expected at least a somewhat present positive correlation
 
 
-# In[60]:
+# In[62]:
 
 
 statistic, pvalue = f_oneway(train_copy["quality"], train_copy["sulphates"])
@@ -560,7 +579,7 @@ print(f"ANOVA statistic: {statistic}")
 print(f"pvalue: {pvalue}")
 
 
-# In[61]:
+# In[63]:
 
 
 statistic, pvalue = kruskal(train_copy["quality"], train_copy["pH"])
@@ -571,13 +590,13 @@ print(f"pvalue: {pvalue}")
 
 # #### alcohol
 
-# In[62]:
+# In[64]:
 
 
 train_copy["alcohol"].dtype
 
 
-# In[63]:
+# In[65]:
 
 
 # Let's check out the distribution
@@ -586,7 +605,7 @@ sns.histplot(train_copy["alcohol"])
 # Positively skewed 
 
 
-# In[64]:
+# In[66]:
 
 
 sns.boxplot(data=train_copy, x="quality", y="alcohol")
@@ -594,7 +613,7 @@ sns.boxplot(data=train_copy, x="quality", y="alcohol")
 # I predict a strong postive correlation
 
 
-# In[65]:
+# In[67]:
 
 
 statistic, pvalue = spearmanr(train_copy["quality"], train_copy["alcohol"])
@@ -605,7 +624,7 @@ print(f"pvalue: {pvalue}")
 # 0.4 is the strongest we've seen in a feature so far tho lol
 
 
-# In[66]:
+# In[68]:
 
 
 statistic, pvalue = kruskal(train_copy["quality"], train_copy["alcohol"])
@@ -614,7 +633,7 @@ print(f"Kruskal statistic: {statistic}")
 print(f"pvalue: {pvalue}")
 
 
-# In[67]:
+# In[69]:
 
 
 # Nice done with that (for now)
@@ -622,7 +641,7 @@ print(f"pvalue: {pvalue}")
 
 # ## Feature Engineering
 
-# In[68]:
+# In[70]:
 
 
 # Let's analyze the features, check for multicollinearity and see if we can make more features  
@@ -630,7 +649,7 @@ plt.figure(figsize = (15,8))
 sns.heatmap(train_copy.corr(numeric_only = True), annot = True, cmap= 'YlGnBu')
 
 
-# In[69]:
+# In[71]:
 
 
 # Let's make some features and see if we can get anything meaningful
@@ -639,19 +658,19 @@ train_copy["bound sulfur dioxide"] = train_copy["total sulfur dioxide"] - train_
 train_copy["salts"] = train_copy["sulphates"] + train_copy["chlorides"]
 
 
-# In[70]:
+# In[72]:
 
 
 train_copy["alcohol"].unique()
 
 
-# In[71]:
+# In[73]:
 
 
 train_copy.head()
 
 
-# In[72]:
+# In[74]:
 
 
 # replotting the heatmap after creating some new features
@@ -659,14 +678,14 @@ plt.figure(figsize = (15,8))
 sns.heatmap(train_copy.corr(numeric_only = True), annot = True, cmap= 'YlGnBu')
 
 
-# In[73]:
+# In[75]:
 
 
 # Let's drop total sulfur dioxide, salts
 train_copy = train_copy.drop(["total sulfur dioxide", "salts"], axis=1)
 
 
-# In[74]:
+# In[76]:
 
 
 # Do the same for the test set
@@ -677,7 +696,7 @@ test_copy = test_copy.drop(["total sulfur dioxide"], axis=1)
 
 # ## Model Training and Selection
 
-# In[75]:
+# In[77]:
 
 
 from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -686,7 +705,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
 
-# In[76]:
+# In[78]:
 
 
 # Let's define the two scalers we plan to use on the dataset, we will see how each of them performs on the dataset
@@ -694,7 +713,7 @@ robust = RobustScaler()
 standard = StandardScaler()
 
 
-# In[77]:
+# In[79]:
 
 
 # Removing the target variable from the dataframe
@@ -702,7 +721,7 @@ X_copy = train_copy.drop("quality", axis=1)
 y_copy = train_copy["quality"]
 
 
-# In[78]:
+# In[80]:
 
 
 # different X dataframes scaled with different scalers
@@ -710,7 +729,7 @@ X_copy_robust = robust.fit_transform(X_copy)
 X_copy_standard = standard.fit_transform(X_copy)
 
 
-# In[79]:
+# In[81]:
 
 
 # One test and train set for robust scaler and another for standard scaler
@@ -718,21 +737,22 @@ X_copy_train_rob, X_copy_test_rob, y_copy_train, y_copy_test = train_test_split(
 X_copy_train_stand, X_copy_test_stand, y_copy_train, y_copy_test = train_test_split(X_copy_standard, y_copy, test_size=0.2, random_state=42)
 
 
-# In[80]:
+# In[82]:
 
 
-model1 = LogisticRegression(max_iter=1000, n_jobs=-1)
-model2 = LogisticRegression(max_iter=1000, n_jobs=-1)
+# You  have to specify multi_class='multinominal if the classes aren't indicator variables
+model1 = LogisticRegression(multi_class='multinomial', max_iter=1000, n_jobs=-1)
+model2 = LogisticRegression(multi_class='multinomial', max_iter=1000, n_jobs=-1)
 
 
-# In[81]:
+# In[83]:
 
 
 # Let's train a model with the robust scaled X
 model1.fit(X_copy_train_rob, y_copy_train)
 
 
-# In[82]:
+# In[84]:
 
 
 # The accuracy ain't too crazily bad, especially since it's multinominal we'll see precision and recall
@@ -740,104 +760,67 @@ pred1 = model1.predict(X_copy_test_rob)
 accuracy_score(y_copy_test, pred1)
 
 
-# In[83]:
+# In[85]:
 
 
 # Let's see how the standard scaled one does
 model2.fit(X_copy_train_stand, y_copy_train)
 
 
-# In[85]:
+# In[86]:
 
 
 pred2 = model2.predict(X_copy_test_stand)
 accuracy_score(y_copy_test, pred2)
-# Oh robust scaler works better by a minute quality I guess
 
-
-# In[86]:
-
-
-# Just said let me go on a little detour and see how log transform would be applied
-from sklearn.preprocessing import FunctionTransformer
+# Ok so they're the same, I'll do some feature scaling tho
 
 
 # In[87]:
 
 
-log_model = FunctionTransformer(func=np.log1p)
+# Let's actually guage some metrics and see what's going on here
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve, roc_auc_score, precision_recall_curve, auc
 
 
 # In[88]:
 
 
-model3 = LogisticRegression(n_jobs=-1, max_iter=1000)
+# creating the confusion matrix to see the TN, TP, FN, & FP
+confusion_matrix(y_copy_test, pred2)
+
+
+# In[89]:
+
+
+# Just the confusion matrix but arranged more systematically
+pd.crosstab(y_copy_test, pred2, rownames=['Actual'], colnames=['Predicted'], margins = True)
 
 
 # In[90]:
 
 
-X_copy_log = log_model.fit_transform(X_copy)
+# Classification report to see the metrics of our model
+print(classification_report(y_copy_test, pred2))
 
 
 # In[91]:
 
 
-X_copy_train_log, X_copy_test_log, y_copy_train, y_copy_test = train_test_split(X_copy_log, y_copy, test_size=0.2, random_state=42)
+# Let's make an ROC curve for our model
+fpr, tpr, thresholds = roc_curve(y_copy_test, pred2, pos_label=5)
+
+
+# Tomorrow we do this and we also finish up if possible
+
+
+# In[ ]:
+
+
+
 
 
 # In[92]:
-
-
-model3.fit(X_copy_train_log, y_copy_train)
-
-
-# In[95]:
-
-
-log_pred = model3.predict(X_copy_test_log)
-accuracy_score(y_copy_test, log_pred)
-# I got decently surprised, ok so now I have and ides
-
-
-# In[99]:
-
-
-# Let's actually guage some metrics and see what's going on here
-from sklearn.metrics import precision_recall_fscore_support
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
 
 
 # We are going to use our scaling methods to different features and shii and see how close of an accuracy we can get
