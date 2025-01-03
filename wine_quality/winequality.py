@@ -740,9 +740,8 @@ X_copy_train_stand, X_copy_test_stand, y_copy_train, y_copy_test = train_test_sp
 # In[82]:
 
 
-# You  have to specify multi_class='multinominal if the classes aren't indicator variables
-model1 = LogisticRegression(multi_class='multinomial', max_iter=1000, n_jobs=-1)
-model2 = LogisticRegression(multi_class='multinomial', max_iter=1000, n_jobs=-1)
+model1 = LogisticRegression(max_iter=1000, n_jobs=-1)
+model2 = LogisticRegression(max_iter=1000, n_jobs=-1)
 
 
 # In[83]:
@@ -807,21 +806,420 @@ print(classification_report(y_copy_test, pred2))
 # In[91]:
 
 
-# Let's make an ROC curve for our model
-fpr, tpr, thresholds = roc_curve(y_copy_test, pred2, pos_label=5)
-
-
-# Tomorrow we do this and we also finish up if possible
-
-
-# In[ ]:
-
-
-
+# This gives us the class probabilities for each observation, just neat to know
+y_pred_proba = model2.predict_proba(X_copy_test_rob)
 
 
 # In[92]:
 
 
+# Found out that you can only plot the ROC curve and compute the auc score for binary classification unless you use OneVsRestClassifier,
+# for multiclass classification problems, silly me
+
+
+# In[93]:
+
+
 # We are going to use our scaling methods to different features and shii and see how close of an accuracy we can get
+# Let's see what we can do to get the best model and features and then we begin scaling and making the last and final model
+
+# Let's do feature Importances to see how important each feature is to out model's final outcome
+coefficients = model1.coef_[0]
+odds_ratios = np.exp(coefficients)
+
+
+# Display feature importance using coefficients and odds ratios
+feature_importance = pd.DataFrame({
+    'Feature': X_copy.columns,
+    'Coefficient': coefficients,
+    'Odds Ratio': odds_ratios
+})
+print("\nFeature Importance (Coefficient and Odds Ratio):")
+print(feature_importance.sort_values(by='Coefficient', ascending=False))
+
+
+
+# When looking at Feature Importances, in the coefficent, negative values are kinda like negative correlation with the log odds and vice versa
+# So look for coefficients that are greater/less than 0 by a large margin, closer to 0 == "less significant feature"
+
+# When looking at Odds Ratio look at features that are most deviated from 1, negatively or positively, closer to 1 = "less significant feature"
+
+# Also, it's important to look at the p-values of the feature from feature selection, cuz if the coefficient is good but the p value is high, then...
+# .. the feature might still be trash.
+
+# Also consider domain knowledge with the features to know which are the most impactful.
+
+
+# In[94]:
+
+
+# ok now let's do RFE:
+from sklearn.feature_selection import RFE
+rfe = RFE(model1, n_features_to_select=9)
+
+rfe.fit(X_copy_train_stand, y_copy_train)
+
+
+rfe_features = X_copy.columns[rfe.support_]
+print("\nSelected Features by RFE:")
+print(rfe_features)
+
+# RFE would return the best x features for your model
+
+
+# In[95]:
+
+
+# Let's drop "density", "residual sugar" and "free sulfur dioxide"
+X_dropped = X_copy.drop(["density", "residual sugar", "free sulfur dioxide"], axis=1)
+
+
+# In[96]:
+
+
+# Let's standardize the new X
+new_X = standard.fit_transform(X_dropped)
+
+
+# In[97]:
+
+
+new_train_x, new_test_x, new_train_y, new_test_y = train_test_split(new_X, y_copy, random_state=42, test_size=0.2)
+
+
+# In[98]:
+
+
+new_model = LogisticRegression(n_jobs=-1, max_iter=10000)
+new_model.fit(new_train_x, new_train_y)
+
+
+# In[99]:
+
+
+preds = new_model.predict(new_test_x)
+
+
+# In[100]:
+
+
+accuracy_score(new_test_y, preds)
+
+# Our model accuaracy dropped lollll, let's see the classification report since it's a three class model, accuracy doesn't tell the full story
+
+
+# In[101]:
+
+
+# Let's compare the two
+print(classification_report(new_test_y, preds))
+
+
+# In[102]:
+
+
+# Just comparing the model2 report to this one
+
+'''
+    precision    recall  f1-score   support
+    
+               5       0.66      0.86      0.75        50
+               6       0.57      0.41      0.48        39
+               7       0.75      0.38      0.50         8
+    
+        accuracy                           0.64        97
+       macro avg       0.66      0.55      0.58        97
+    weighted avg       0.63      0.64      0.62        97
+
+'''
+
+# Oh no this one's actually better wow ok, noted, don't drop any features
+
+
+# In[103]:
+
+
+# For our final magic trick let's do a grid search and see the best hyperparameters for our model2
+from sklearn.model_selection import GridSearchCV
+param_grid = {
+    'penalty': ['l1', 'l2', 'elasticnet'],
+    'C': [0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
+    'l1_ratio': [.50, .75]
+}
+
+grid_search = GridSearchCV(model2, param_grid, scoring='accuracy', n_jobs=-1)
+
+
+# In[104]:
+
+
+grid_search.fit(X_copy_train_stand, y_copy_train)
+
+
+# In[105]:
+
+
+# Let's get the best regularization strength and penalty
+print("Best regularization strength:", grid_search.best_params_['C'])
+print("Best penalty:", grid_search.best_params_['penalty'])
+
+if grid_search.best_params_['penalty'] == 'elasticnet':
+    print("Best alpha:", grid_search.best_params_['l1_ratio'])
+
+# This is basically the default log_reg hyperparameters, so I wanna try scaling some features and stuff, and see what happens
+
+
+# ## Try to make the best model
+
+# In[106]:
+
+
+# Importing Libraries
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+
+# In[107]:
+
+
+# Making a log scaler
+log_transform = FunctionTransformer(np.log1p)
+
+
+# In[108]:
+
+
+col = ColumnTransformer(
+    transformers = [
+        ("log", log_transform, ["bound sulfur dioxide", "alcohol"]),
+        ("robust", RobustScaler(), ["sulphates", "density", "chlorides", "residual sugar", "volatile acidity"])
+    ],
+    remainder="passthrough",
+    n_jobs=-1
+)       
+
+
+# In[109]:
+
+
+pip1 = Pipeline([
+    ("col", col),
+    ("stand", StandardScaler()),
+    ("log_reg", LogisticRegression(max_iter=10000, n_jobs=-1))
+])
+
+
+# In[110]:
+
+
+# Let's split the fresh test and train set for this model
+bestx_train, bestx_test, y_trainb, y_testb = train_test_split(X_copy, y_copy, random_state=42, test_size=0.2)
+
+
+# In[111]:
+
+
+pip1.fit(bestx_train, y_trainb)
+
+
+# In[112]:
+
+
+bst_pred = pip1.predict(bestx_test)
+
+
+# In[113]:
+
+
+accuracy_score(y_testb, bst_pred)
+
+# Ok not a bad accuracy score for multiclass logistic regression
+
+
+# In[114]:
+
+
+# But the classification report determines everything
+print(classification_report(y_testb, bst_pred))
+
+
+# In[ ]:
+
+
+# Let's compare it to the best one
+
+'''
+    precision    recall  f1-score   support
+    
+               5       0.66      0.86      0.75        50
+               6       0.57      0.41      0.48        39
+               7       0.75      0.38      0.50         8
+    
+        accuracy                           0.64        97
+       macro avg       0.66      0.55      0.58        97
+    weighted avg       0.63      0.64      0.62        97
+
+'''
+
+
+# In[116]:
+
+
+# Let's make a pairplot and like see the distributions for all the features and redo it 
+sns.pairplot(data=X_copy)
+
+
+# In[117]:
+
+
+# I definetly see some multicollinearity here smh, so let's drop "total acidity"
+best_X = X_copy.drop("total acidity", axis=1)
+
+
+# In[118]:
+
+
+# now let's run it back
+bstX_train, bstx_test, y_trainbst, y_testbst = train_test_split(best_X, y_copy, random_state=42, test_size=0.2)
+
+
+# In[119]:
+
+
+# We have to redo this so we have a brand new model 
+pip2 = Pipeline([
+    ("col", col),
+    ("stand", StandardScaler()),
+    ("log_reg", LogisticRegression(max_iter=10000, n_jobs=-1))
+])
+
+
+# In[120]:
+
+
+pip2.fit(bstX_train, y_trainbst)
+
+
+# In[122]:
+
+
+bestpred = pip2.predict(bstx_test)
+
+
+# In[124]:
+
+
+accuracy_score(y_testbst, bestpred)
+
+# Oh no it's just still worse
+
+
+# In[126]:
+
+
+# Let's see the classs report
+print(classification_report(y_testbst, bestpred))
+
+
+# In[ ]:
+
+
+# Let's compare it to the best one
+
+'''
+    precision    recall  f1-score   support
+    
+               5       0.66      0.86      0.75        50
+               6       0.57      0.41      0.48        39
+               7       0.75      0.38      0.50         8
+    
+        accuracy                           0.64        97
+       macro avg       0.66      0.55      0.58        97
+    weighted avg       0.63      0.64      0.62        97
+
+'''
+
+
+# In[127]:
+
+
+# I'm thinking let's just make one final pipeline and just apply robust scaler and standardize the set, let's see how it goes
+pip_try = Pipeline([
+    ("robb", RobustScaler()),
+    ("stand", StandardScaler()),
+    ("model_try", LogisticRegression(max_iter=1000, n_jobs=-1))
+])
+
+
+# In[128]:
+
+
+# Let's test it on that X without mulitcollinearity and then the inital X
+pip_try.fit(bstX_train, y_trainbst)
+
+
+# In[129]:
+
+
+final_try = pip_try.predict(bstx_test)
+
+
+# In[130]:
+
+
+accuracy_score(y_testbst, final_try)
+
+# I think this is just the best we can obtain with such a basic model like logistic regression
+
+
+# In[131]:
+
+
+# Now with the initial X and y
+tryX_train, tryx_test, y_traintry, y_testtry = train_test_split(X_copy, y_copy, random_state=42, test_size=0.2)
+
+
+# In[132]:
+
+
+pip_try2 = Pipeline([
+    ("robb", RobustScaler()),
+    ("stand", StandardScaler()),
+    ("model_try", LogisticRegression(max_iter=1000, n_jobs=-1))
+])
+
+
+# In[133]:
+
+
+pip_try.fit(tryX_train, y_traintry)
+
+
+# In[134]:
+
+
+try_pred = pip_try.predict(tryx_test)
+
+
+# In[135]:
+
+
+accuracy_score(y_testtry, try_pred)
+
+# Yup this is just the best score we can hope to obtain with this model
+
+
+# In[136]:
+
+
+# Tomorrow we pick up with the final pipelining and model
+
+
+# ## Final Pipeline and Model
+
+# In[ ]:
+
+
+
 
