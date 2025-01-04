@@ -1317,8 +1317,8 @@ final_predictions = last_pipe.predict(X_test)
 accuracy_score(y_test, final_predictions)
 
 
-# In[ ]:
+# In[145]:
 
 
-# Not an abysmal score
+# Not an abysmal score, but it's not good nevertheless, the data was never meant for a basic linear model anyways(cope)
 
