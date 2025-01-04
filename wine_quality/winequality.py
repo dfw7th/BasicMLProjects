@@ -1044,7 +1044,7 @@ accuracy_score(y_testb, bst_pred)
 print(classification_report(y_testb, bst_pred))
 
 
-# In[ ]:
+# In[115]:
 
 
 # Let's compare it to the best one
@@ -1101,13 +1101,13 @@ pip2 = Pipeline([
 pip2.fit(bstX_train, y_trainbst)
 
 
-# In[122]:
+# In[121]:
 
 
 bestpred = pip2.predict(bstx_test)
 
 
-# In[124]:
+# In[122]:
 
 
 accuracy_score(y_testbst, bestpred)
@@ -1115,7 +1115,7 @@ accuracy_score(y_testbst, bestpred)
 # Oh no it's just still worse
 
 
-# In[126]:
+# In[123]:
 
 
 # Let's see the classs report
@@ -1141,7 +1141,7 @@ print(classification_report(y_testbst, bestpred))
 '''
 
 
-# In[127]:
+# In[125]:
 
 
 # I'm thinking let's just make one final pipeline and just apply robust scaler and standardize the set, let's see how it goes
@@ -1152,20 +1152,20 @@ pip_try = Pipeline([
 ])
 
 
-# In[128]:
+# In[126]:
 
 
 # Let's test it on that X without mulitcollinearity and then the inital X
 pip_try.fit(bstX_train, y_trainbst)
 
 
-# In[129]:
+# In[127]:
 
 
 final_try = pip_try.predict(bstx_test)
 
 
-# In[130]:
+# In[128]:
 
 
 accuracy_score(y_testbst, final_try)
@@ -1173,14 +1173,14 @@ accuracy_score(y_testbst, final_try)
 # I think this is just the best we can obtain with such a basic model like logistic regression
 
 
-# In[131]:
+# In[129]:
 
 
 # Now with the initial X and y
 tryX_train, tryx_test, y_traintry, y_testtry = train_test_split(X_copy, y_copy, random_state=42, test_size=0.2)
 
 
-# In[132]:
+# In[130]:
 
 
 pip_try2 = Pipeline([
@@ -1190,19 +1190,19 @@ pip_try2 = Pipeline([
 ])
 
 
-# In[133]:
+# In[131]:
 
 
 pip_try.fit(tryX_train, y_traintry)
 
 
-# In[134]:
+# In[132]:
 
 
 try_pred = pip_try.predict(tryx_test)
 
 
-# In[135]:
+# In[133]:
 
 
 accuracy_score(y_testtry, try_pred)
@@ -1210,7 +1210,7 @@ accuracy_score(y_testtry, try_pred)
 # Yup this is just the best score we can hope to obtain with this model
 
 
-# In[136]:
+# In[134]:
 
 
 # Tomorrow we pick up with the final pipelining and model
@@ -1218,8 +1218,107 @@ accuracy_score(y_testtry, try_pred)
 
 # ## Final Pipeline and Model
 
+# In[135]:
+
+
+# Let's make the final pipeline
+from sklearn.base import TransformerMixin, BaseEstimator
+
+
+# In[136]:
+
+
+# Let's do the Transformer that makes "total acidity"
+class MakeAcidity(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X):
+        X = X.copy()
+        X["total acidity"] = X["fixed acidity"] + X["volatile acidity"]
+        return X
+
+
+# In[137]:
+
+
+# Now the class that makes "bound sulfur dioxide"
+class MakeBound(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X):
+        X = X.copy()
+        X["bound sulfur dioxide"] = X["total sulfur dioxide"] - X["free sulfur dioxide"]
+        return X
+
+
+# In[138]:
+
+
+# And one that drops the features we don't need
+class DropFeatures(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X):
+        X = X.copy()
+        X = X.drop(["total sulfur dioxide", "total acidity"], axis=1)
+        return X
+
+
+# In[139]:
+
+
+# We make the pipeline that does the initial transformation
+mid_pipe = Pipeline([
+    ("acid", MakeAcidity()),
+    ("bound", MakeBound()),
+    ("drop", DropFeatures())
+])
+
+
+# In[140]:
+
+
+# And lastly the pipeline that does the scaling and predictions
+last_pipe = Pipeline([
+    ("rob", RobustScaler()),
+    ("stand", StandardScaler()),
+    ("model", LogisticRegression(max_iter=1000, n_jobs=-1))
+])
+
+
+# In[141]:
+
+
+# We make the final test and train sets
+X_train = train.drop("quality", axis=1)
+y_train = train["quality"]
+
+X_test = test.drop("quality", axis=1)
+y_test = test["quality"]
+
+
+# In[142]:
+
+
+# fitting the pipe on the data
+last_pipe.fit(X_train, y_train)
+
+
+# In[143]:
+
+
+final_predictions = last_pipe.predict(X_test)
+
+
+# In[144]:
+
+
+# Final predictions of our model
+accuracy_score(y_test, final_predictions)
+
+
 # In[ ]:
 
 
-
+# Not an abysmal score
 
